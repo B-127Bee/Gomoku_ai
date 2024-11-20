@@ -1,16 +1,21 @@
 # Constants
-import numpy as np
-
-PLAYER_X = 1 # user
-PLAYER_O = 2 # agent
-EMPTY = 0
+PLAYER_X = 'X' # user
+PLAYER_O = 'O' # agent
+EMPTY = '*'
 BOARD_SIZE = 9
 WINNING_LENGTH = 5
 
-POS_VAL = [[min(i, j, BOARD_SIZE + 1 - i, BOARD_SIZE + 1 - j) for j in range(1, BOARD_SIZE + 1)] for i in range(1, BOARD_SIZE + 1)]
-for i in range(BOARD_SIZE):
-    for j in range(BOARD_SIZE):
-        POS_VAL[i][j] /= 5
+POS_VAL = [
+    [0.1, 0.15, 0.2, 0.25, 0.25, 0.25, 0.2, 0.15, 0.1],
+    [0.15, 0.2, 0.25, 0.3, 0.3, 0.3, 0.25, 0.2, 0.15],
+    [0.2, 0.25, 0.3, 0.35, 0.35, 0.35, 0.3, 0.25, 0.2],
+    [0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.35, 0.3, 0.25],
+    [0.25, 0.3, 0.35, 0.4, 0.5, 0.4, 0.35, 0.3, 0.25],
+    [0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.35, 0.3, 0.25],
+    [0.2, 0.25, 0.3, 0.35, 0.35, 0.35, 0.3, 0.25, 0.2],
+    [0.15, 0.2, 0.25, 0.3, 0.3, 0.3, 0.25, 0.2, 0.15],
+    [0.1, 0.15, 0.2, 0.25, 0.25, 0.25, 0.2, 0.15, 0.1]
+]
 
 
 DIRECTION = [[0,  -1, 0, 1],
@@ -18,12 +23,6 @@ DIRECTION = [[0,  -1, 0, 1],
              [-1, -1, 1, 1],
              [-1, 1,  1, -1]]
 DEPTH = 3
-class GoPoint():
-    def __init__(self, x, y, v):
-        self.x = x
-        self.y = y
-        self.v = v
-# MOVE = GoPoint(0, 0, 0)
 MOVE = (0, 0)
 
 LIAN_5 = "11111"
@@ -59,10 +58,14 @@ MIAN_2_7 = "10001"
 
 # Check if move is valid
 def is_valid_move(board, row, col):
-    return 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE and board[row, col] == EMPTY
+    return 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE and board[row][col] == EMPTY
 
 def is_pos_valid(row, col):
     return 0 <= row < BOARD_SIZE and 0 <= col < BOARD_SIZE
+
+# initialize board
+def initialize_board():
+    return [["*" for _ in range(9)] for _ in range(9)]
 
 # Check if game is over
 def is_game_over(board, last_move, player):
@@ -76,7 +79,7 @@ def is_game_over(board, last_move, player):
 
         # 正向检查
         r, c = row + direction[2], col + direction[3]
-        while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r, c] == player:
+        while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == player:
             count += 1
             if count == WINNING_LENGTH:
                 return True
@@ -84,7 +87,7 @@ def is_game_over(board, last_move, player):
 
         # 反向检查
         r, c = row + direction[0], col + direction[1]
-        while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r, c] == player:
+        while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == player:
             count += 1
             if count == WINNING_LENGTH:
                 return True
@@ -96,17 +99,15 @@ def is_game_over(board, last_move, player):
 def heuristic_evaluation(board, player):
     self_s = 0
     opponent_s = 0
+    op_player = PLAYER_O if player == PLAYER_X else PLAYER_X
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
-            if board[i, j] == player:
+            if board[i][j] == player:
                 self_s += val_f(board, (i, j), player)
-            elif board[i, j] == 3 - player:
-                opponent_s += val_f(board,(i, j), 3 - player)
+            elif board[i][j] == op_player:
+                opponent_s += val_f(board,(i, j), op_player)
 
-    if self_s >= opponent_s:
-        return self_s
-    else:
-        return opponent_s
+    return self_s - opponent_s
 
 def val_f(board, pos, player):
     x = pos[0]
@@ -120,9 +121,9 @@ def val_f(board, pos, player):
             r = x + i * direction[2]
             c = y + i * direction[3]
             if 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE:
-                if board[r, c] == player:
+                if board[r][c] == player:
                     s += '1'
-                elif board[r, c] == EMPTY:
+                elif board[r][c] == EMPTY:
                     s += '0'
                 else:
                     s += '-'
@@ -173,38 +174,50 @@ def max_value(board, depth, alpha, beta, player, last_move):
     if depth == 0 or is_game_over(board, last_move, player):
         return heuristic_evaluation(board, player), last_move
     v = float('-inf')
+    op_player = PLAYER_O if player == PLAYER_X else PLAYER_X
     best_move = None
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
-            if board[i, j] == EMPTY:
-                board[i, j] = player
-                v_tmp, _ = min_value(board, depth - 1, alpha, beta, 3-player, (i, j))
-                board[i, j] = EMPTY
+            if board[i][j] == EMPTY:
+                board[i][j] = player
+                v_tmp, move_tmp = min_value(board, depth - 1, alpha, beta, op_player, (i, j))
+                board[i][j] = EMPTY
                 if v_tmp > v:
                     v = v_tmp
-                    best_move = (i, j)
+                    # if depth == DEPTH:
+                    #     # At the root level, set best_move to current move
+                    #     best_move = (i, j)
+                    # else:
+                    #     # Propagate best_move from deeper levels
+                    best_move = move_tmp
+                alpha = max(alpha, v)
                 if v >= beta:
                     return v, best_move
-                alpha = max(alpha, v)
     return v, best_move
 
 def min_value(board, depth, alpha, beta, player, last_move):
     if depth == 0 or is_game_over(board, last_move, player):
         return heuristic_evaluation(board, player), last_move
     v = float('inf')
+    op_player = PLAYER_O if player == PLAYER_X else PLAYER_X
     best_move = None
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
-            if board[i, j] == EMPTY:
-                board[i, j] = player
-                v_tmp, _ = max_value(board, depth - 1, alpha, beta, 3-player, (i, j))
-                board[i, j] = EMPTY
+            if board[i][j] == EMPTY:
+                board[i][j] = player
+                v_tmp, move_tmp = max_value(board, depth - 1, alpha, beta, op_player, (i, j))
+                board[i][j] = EMPTY
                 if v_tmp < v:
                     v = v_tmp
-                    best_move = (i, j)
+                    # if depth == DEPTH:
+                    #     # At the root level, set best_move to current move
+                    #     best_move = (i, j)
+                    # else:
+                    #     # Propagate best_move from deeper levels
+                    best_move = move_tmp
+                beta = min(beta, v)
                 if v <= alpha:
                     return v, best_move
-                beta = min(beta, v)
     return v, best_move
 
 def alpha_beta(board, last_move):
@@ -214,20 +227,20 @@ def alpha_beta(board, last_move):
     return move[0], move[1]
 
 def print_board(board):
-    for row in board:
-        print(' '.join('X' if cell == PLAYER_X else 'O' if cell == PLAYER_O else '.' for cell in row))
-    print()
+    print("   " + " ".join(str(i) for i in range(9)))
+    for i, row in enumerate(board):
+        print(f"{i}  " + " ".join(row))
 
 # Main function to play the game
 def play_game():
 
     global board
-    board = np.zeros((9, 9), dtype=int)
+    board = initialize_board()
     while True:
         try:
             row, col = map(int, input("输入你的落子位置 (行 列): ").split())
             if is_valid_move(board, row, col):
-                board[row, col] = PLAYER_X
+                board[row][col] = PLAYER_X
                 last_move = (row, col)
                 print_board(board)
             else:
@@ -245,7 +258,7 @@ def play_game():
         print("AI回合")
         ai_row, ai_col = alpha_beta(board, last_move)
         print(ai_row, ai_col)
-        board[ai_row, ai_col] = PLAYER_O
+        board[ai_row][ai_col] = PLAYER_O
         last_move = (ai_row, ai_col)
         print_board(board)
 
@@ -254,7 +267,7 @@ def play_game():
             print("AI赢了！")
             break
 
-        if np.all(board != EMPTY):
+        if all(EMPTY not in row for row in board):
             print_board(board)
             print("平局！")
             break
