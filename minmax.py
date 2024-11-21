@@ -2,6 +2,8 @@
 import time
 import numpy as np
 
+node_count = 0 
+
 # initialize board
 def initialize_board():
     return np.full((9, 9), "*", dtype=str)
@@ -83,6 +85,10 @@ def generate_legal_moves(board):
 
 # minimax algorithm
 def minimax(board, depth, maximizing_player):
+
+    global node_count  
+    node_count += 1  
+
     if depth == 0 or check_winner(board, "X") or check_winner(board, "O"):
         return evaluate_board(board)
 
@@ -121,6 +127,7 @@ def ai_move(board):
 
     end_time = time.time()
     print(f"AI thinking time: {end_time - start_time:.6f} seconds")
+    print(f"AI searched {node_count} nodes")  # print number of searched node
     return best_move
 
 def make_move_in_place(board, move, player):
