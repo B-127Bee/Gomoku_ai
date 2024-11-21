@@ -273,5 +273,5 @@ class Gomoku:
 
 
 # Start the game
-    game = Gomoku()
-    game.play()
+game = Gomoku()
+game.play()
