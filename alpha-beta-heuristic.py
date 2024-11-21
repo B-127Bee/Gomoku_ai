@@ -105,7 +105,6 @@ def evaluate_pattern(s):
     score = 0
     if s.find(LIAN_5) != -1:
         score += 100000000
-        print("reach")
     if s.find(HUO_4) != -1:
         score += 1000000
     if any(s.find(pattern) != -1 for pattern in [CHONG_4_1, CHONG_4_2, CHONG_4_3, CHONG_4_4, CHONG_4_5]):
