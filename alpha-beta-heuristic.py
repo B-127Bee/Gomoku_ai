@@ -5,6 +5,7 @@ EMPTY = '*'
 BOARD_SIZE = 9
 WINNING_LENGTH = 5
 
+# board position values
 POS_VAL = [
     [0.1, 0.15, 0.2, 0.25, 0.25, 0.25, 0.2, 0.15, 0.1],
     [0.15, 0.2, 0.25, 0.3, 0.3, 0.3, 0.25, 0.2, 0.15],
@@ -27,12 +28,13 @@ MOVE = (0, 0)
 
 LIAN_5 = "11111"
 HUO_4 = "011110"
-HUO_3_1 = "01110"
-HUO_3_2 = "1011"
-HUO_3_3 = HUO_3_2[::-1]
+HUO_3_1 = "001110"
+HUO_3_2 = HUO_3_1[::-1]
+HUO_3_3 = "010110"
+HUO_3_4 = HUO_3_3[::-1]
 HUO_2_1 = "001100"
-HUO_2_2 = "01010"
-HUO_2_3 = "1001"
+HUO_2_2 = "010100"
+HUO_2_3 = HUO_2_2[::-1]
 CHONG_4_1 = "-11110"
 CHONG_4_2 = CHONG_4_1[::-1]
 CHONG_4_3 = "10111"
@@ -40,9 +42,9 @@ CHONG_4_4 = CHONG_4_3[::-1]
 CHONG_4_5 = "11011"
 MIAN_3_1 = "00111-"
 MIAN_3_2 = MIAN_3_1[::-1]
-MIAN_3_3 = "-11010"
+MIAN_3_3 = "01101-"
 MIAN_3_4 = MIAN_3_3[::-1]
-MIAN_3_5 = "-10110"
+MIAN_3_5 = "01011-"
 MIAN_3_6 = MIAN_3_5[::-1]
 MIAN_3_7 = "10011"
 MIAN_3_8 = MIAN_3_7[::-1]
@@ -75,9 +77,10 @@ def is_game_over(board, last_move, player):
     row, col = last_move
 
     for direction in DIRECTION:
-        count = 1  # 包括最后一步棋子
+        # including the last step
+        count = 1
 
-        # 正向检查
+        # checking forward
         r, c = row + direction[2], col + direction[3]
         while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == player:
             count += 1
@@ -85,7 +88,7 @@ def is_game_over(board, last_move, player):
                 return True
             r, c = r + direction[2], c + direction[3]
 
-        # 反向检查
+        # checking backward
         r, c = row + direction[0], col + direction[1]
         while 0 <= r < BOARD_SIZE and 0 <= c < BOARD_SIZE and board[r][c] == player:
             count += 1
@@ -99,7 +102,10 @@ def is_game_over(board, last_move, player):
 def heuristic_evaluation(board, player):
     self_s = 0
     opponent_s = 0
-    op_player = PLAYER_O if player == PLAYER_X else PLAYER_X
+    if player == PLAYER_X:
+        op_player = PLAYER_O
+    else:
+        op_player = PLAYER_X
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
             if board[i][j] == player:
@@ -107,8 +113,29 @@ def heuristic_evaluation(board, player):
             elif board[i][j] == op_player:
                 opponent_s += val_f(board,(i, j), op_player)
 
-    return self_s - opponent_s
+    return self_s - opponent_s * 0.15
 
+# Check current set of chess's pattern to calculate the score
+def evaluate_pattern(s):
+    score = 0
+    if s.find(LIAN_5) != -1:
+        score += 1000000
+    if s.find(HUO_4) != -1:
+        score += 100000
+    if any(s.find(pattern) != -1 for pattern in [CHONG_4_1, CHONG_4_2, CHONG_4_3, CHONG_4_4, CHONG_4_5]):
+        score += 80000
+    if any(s.find(pattern) != -1 for pattern in [HUO_3_1, HUO_3_2, HUO_3_3, HUO_3_4]):
+        score += 50000
+    if any(s.find(pattern) != -1 for pattern in [MIAN_3_1, MIAN_3_2, MIAN_3_3, MIAN_3_4, MIAN_3_5, MIAN_3_6, MIAN_3_7, MIAN_3_8, MIAN_3_9, MIAN_3_10]):
+        score += 30000
+    if any(s.find(pattern) != -1 for pattern in [HUO_2_1, HUO_2_2, HUO_2_3]):
+        score += 10000
+    if any(s.find(pattern) != -1 for pattern in [MIAN_2_1, MIAN_2_2, MIAN_2_3, MIAN_2_4, MIAN_2_5, MIAN_2_6, MIAN_2_7]):
+        score += 5000
+
+    return score
+
+# Check current position and its surrounding chess pattern to calculate the total score
 def val_f(board, pos, player):
     x = pos[0]
     y = pos[1]
@@ -130,43 +157,7 @@ def val_f(board, pos, player):
             else:
                 s += '#'
 
-        if s.find(LIAN_5) != -1:
-            score += 1000000
-        if s.find(HUO_4) != -1:
-            score += 100000
-        if (s.find(CHONG_4_1) != -1 or
-                s.find(CHONG_4_2) != -1 or
-                s.find(CHONG_4_3) != -1 or
-                s.find(CHONG_4_4) != -1 or
-                s.find(CHONG_4_5) != -1):
-            score += 80000
-        if (s.find(HUO_3_1) != -1 or
-              s.find(HUO_3_2) != -1 or
-              s.find(HUO_3_3) != -1):
-            score += 50000
-        if (s.find(MIAN_3_1) != -1 or
-                s.find(MIAN_3_2) != -1 or
-                s.find(MIAN_3_3) != -1 or
-                s.find(MIAN_3_4) != -1 or
-                s.find(MIAN_3_5) != -1 or
-                s.find(MIAN_3_6) != -1 or
-                s.find(MIAN_3_7) != -1 or
-                s.find(MIAN_3_8) != -1 or
-                s.find(MIAN_3_9) != -1 or
-                s.find(MIAN_3_10) != -1):
-            score += 30000
-        if (s.find(HUO_2_1) != -1 or
-                s.find(HUO_2_2) != -1 or
-                s.find(HUO_2_3) != -1):
-            score += 10000
-        if (s.find(MIAN_2_1) != -1 or
-                s.find(MIAN_2_2) != -1 or
-                s.find(MIAN_2_3) != -1 or
-                s.find(MIAN_2_4) != -1 or
-                s.find(MIAN_2_5) != -1 or
-                s.find(MIAN_2_6) != -1 or
-                s.find(MIAN_2_7) != -1):
-            score += 5000
+        score += evaluate_pattern(s)
 
     return score * weight
 
@@ -174,24 +165,23 @@ def max_value(board, depth, alpha, beta, player, last_move):
     if depth == 0 or is_game_over(board, last_move, player):
         return heuristic_evaluation(board, player), last_move
     v = float('-inf')
-    op_player = PLAYER_O if player == PLAYER_X else PLAYER_X
+    if player == PLAYER_X:
+        op_player = PLAYER_O
+    else:
+        op_player = PLAYER_X
     best_move = None
+
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
             if board[i][j] == EMPTY:
                 board[i][j] = player
-                v_tmp, move_tmp = min_value(board, depth - 1, alpha, beta, op_player, (i, j))
+                v_tmp, _ = min_value(board, depth - 1, alpha, beta, op_player, (i, j))
                 board[i][j] = EMPTY
                 if v_tmp > v:
                     v = v_tmp
-                    # if depth == DEPTH:
-                    #     # At the root level, set best_move to current move
-                    #     best_move = (i, j)
-                    # else:
-                    #     # Propagate best_move from deeper levels
-                    best_move = move_tmp
+                    best_move = (i, j)
                 alpha = max(alpha, v)
-                if v >= beta:
+                if alpha >= beta:
                     return v, best_move
     return v, best_move
 
@@ -199,24 +189,23 @@ def min_value(board, depth, alpha, beta, player, last_move):
     if depth == 0 or is_game_over(board, last_move, player):
         return heuristic_evaluation(board, player), last_move
     v = float('inf')
-    op_player = PLAYER_O if player == PLAYER_X else PLAYER_X
+    if player == PLAYER_X:
+        op_player = PLAYER_O
+    else:
+        op_player = PLAYER_X
     best_move = None
+
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
             if board[i][j] == EMPTY:
                 board[i][j] = player
-                v_tmp, move_tmp = max_value(board, depth - 1, alpha, beta, op_player, (i, j))
+                v_tmp, _ = max_value(board, depth - 1, alpha, beta, op_player, (i, j))
                 board[i][j] = EMPTY
                 if v_tmp < v:
                     v = v_tmp
-                    # if depth == DEPTH:
-                    #     # At the root level, set best_move to current move
-                    #     best_move = (i, j)
-                    # else:
-                    #     # Propagate best_move from deeper levels
-                    best_move = move_tmp
+                    best_move = (i, j)
                 beta = min(beta, v)
-                if v <= alpha:
+                if alpha >= beta:
                     return v, best_move
     return v, best_move
 
