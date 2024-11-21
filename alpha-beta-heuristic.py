@@ -5,20 +5,6 @@ EMPTY = '*'
 BOARD_SIZE = 9
 WINNING_LENGTH = 5
 
-# board position values
-POS_VAL = [
-    [0.1, 0.15, 0.2, 0.25, 0.25, 0.25, 0.2, 0.15, 0.1],
-    [0.15, 0.2, 0.25, 0.3, 0.3, 0.3, 0.25, 0.2, 0.15],
-    [0.2, 0.25, 0.3, 0.35, 0.35, 0.35, 0.3, 0.25, 0.2],
-    [0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.35, 0.3, 0.25],
-    [0.25, 0.3, 0.35, 0.4, 0.5, 0.4, 0.35, 0.3, 0.25],
-    [0.25, 0.3, 0.35, 0.4, 0.4, 0.4, 0.35, 0.3, 0.25],
-    [0.2, 0.25, 0.3, 0.35, 0.35, 0.35, 0.3, 0.25, 0.2],
-    [0.15, 0.2, 0.25, 0.3, 0.3, 0.3, 0.25, 0.2, 0.15],
-    [0.1, 0.15, 0.2, 0.25, 0.25, 0.25, 0.2, 0.15, 0.1]
-]
-
-
 DIRECTION = [[0,  -1, 0, 1],
              [-1, 0,  1, 0],
              [-1, -1, 1, 1],
@@ -57,6 +43,10 @@ MIAN_2_4 = MIAN_2_3[::-1]
 MIAN_2_5 = "01001-"
 MIAN_2_6 = MIAN_2_5[::-1]
 MIAN_2_7 = "10001"
+
+# Check current pos is in center
+def is_center(board, row, col):
+    return 3 <= row < 6 and 3 <= col < 6
 
 # Check if move is valid
 def is_valid_move(board, row, col):
@@ -99,29 +89,25 @@ def is_game_over(board, last_move, player):
     return False
 
 # Heuristic evaluation function
-def heuristic_evaluation(board, player):
+def heuristic_evaluation(board):
     self_s = 0
     opponent_s = 0
-    if player == PLAYER_X:
-        op_player = PLAYER_O
-    else:
-        op_player = PLAYER_X
     for i in range(BOARD_SIZE):
         for j in range(BOARD_SIZE):
-            if board[i][j] == player:
-                self_s += val_f(board, (i, j), player)
-            elif board[i][j] == op_player:
-                opponent_s += val_f(board,(i, j), op_player)
-
-    return self_s - opponent_s * 0.15
+            if board[i][j] == PLAYER_O:
+                self_s += val_f(board, (i, j), PLAYER_O)
+            elif board[i][j] == PLAYER_X:
+                opponent_s += val_f(board,(i, j), PLAYER_X)
+    return self_s - opponent_s
 
 # Check current set of chess's pattern to calculate the score
 def evaluate_pattern(s):
     score = 0
     if s.find(LIAN_5) != -1:
-        score += 1000000
+        score += 100000000
+        print("reach")
     if s.find(HUO_4) != -1:
-        score += 100000
+        score += 1000000
     if any(s.find(pattern) != -1 for pattern in [CHONG_4_1, CHONG_4_2, CHONG_4_3, CHONG_4_4, CHONG_4_5]):
         score += 80000
     if any(s.find(pattern) != -1 for pattern in [HUO_3_1, HUO_3_2, HUO_3_3, HUO_3_4]):
@@ -140,7 +126,14 @@ def val_f(board, pos, player):
     x = pos[0]
     y = pos[1]
     score = 0
-    weight = POS_VAL[x][y]
+    weight = 1
+
+    # add additional weight to center
+    if is_center(board, pos[0], pos[1]):
+        if pos[0] == 4 and pos[1] == 4:
+            weight = 1.5
+        else:
+            weight = 1.25
 
     for direction in DIRECTION:
         s = ""
@@ -163,7 +156,7 @@ def val_f(board, pos, player):
 
 def max_value(board, depth, alpha, beta, player, last_move):
     if depth == 0 or is_game_over(board, last_move, player):
-        return heuristic_evaluation(board, player), last_move
+        return heuristic_evaluation(board), last_move
     v = float('-inf')
     if player == PLAYER_X:
         op_player = PLAYER_O
@@ -187,7 +180,7 @@ def max_value(board, depth, alpha, beta, player, last_move):
 
 def min_value(board, depth, alpha, beta, player, last_move):
     if depth == 0 or is_game_over(board, last_move, player):
-        return heuristic_evaluation(board, player), last_move
+        return heuristic_evaluation(board), last_move
     v = float('inf')
     if player == PLAYER_X:
         op_player = PLAYER_O
@@ -212,7 +205,7 @@ def min_value(board, depth, alpha, beta, player, last_move):
 def alpha_beta(board, last_move):
     alpha = float('-inf')
     beta = float('inf')
-    _, move = min_value(board, DEPTH, alpha, beta, PLAYER_O, last_move)
+    _, move = max_value(board, DEPTH, alpha, beta, PLAYER_O, last_move)
     return move[0], move[1]
 
 def print_board(board):

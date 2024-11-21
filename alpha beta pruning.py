@@ -137,7 +137,7 @@ def play_game():
                 except (ValueError, IndexError):
                     print("Invalid input! Please try again.")
             board[row][col] = "O"
-        else:  # AI 回合
+        else:
             print("AI is thinking...")
             _, ai_move = alpha_beta_pruning(board, depth=3, alpha=float('-inf'), beta=float('inf'), maximizing_player=True)
             if ai_move:
