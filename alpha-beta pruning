@@ -1,0 +1,189 @@
+import numpy as np
+import time
+
+# 初始化棋盘
+def initialize_board():
+    return [[" " for _ in range(9)] for _ in range(9)]
+
+# 打印棋盘
+def print_board(board):
+    print("   " + " ".join(str(i) for i in range(9)))
+    for i, row in enumerate(board):
+        print(f"{i}  " + " ".join(row))
+
+# 判断有效落子
+def is_valid_move(board, row, col):
+    return 0 <= row < 9 and 0 <= col < 9 and board[row][col] == " "
+
+# 检查胜利条件
+def check_direction(board, row, col, dr, dc, player):
+    count = 0
+    for i in range(5):
+        r, c = row + i * dr, col + i * dc
+        if 0 <= r < 9 and 0 <= c < 9 and board[r][c] == player:
+            count += 1
+        else:
+            break
+    return count == 5
+
+def check_winner(board, player):
+    for row in range(9):
+        for col in range(9):
+            if (
+                check_direction(board, row, col, 1, 0, player) or  # 横向
+                check_direction(board, row, col, 0, 1, player) or  # 纵向
+                check_direction(board, row, col, 1, 1, player) or  # 对角线 \
+                check_direction(board, row, col, 1, -1, player)    # 对角线 /
+            ):
+                return True
+    return False
+
+
+# 评估函数
+def evaluate_board(board):
+    score = 0
+    for row in range(len(board)):
+        for col in range(len(board[row])):
+            if board[row][col] == 'O':  # AI
+                score += evaluate_position(board, row, col, 'O')
+            elif board[row][col] == 'X':  # Player
+                score -= evaluate_position(board, row, col, 'X')  # 反向评估
+    return score
+
+def evaluate_position(board, row, col, player):
+    score = 0
+    directions = [(0, 1), (1, 0), (1, 1), (1, -1)]  # 水平、垂直、对角线
+    for dr, dc in directions:
+        line_score = 0
+        for step in range(-4, 5):  # 检查最多5个位置
+            r, c = row + dr * step, col + dc * step
+            if 0 <= r < len(board) and 0 <= c < len(board) and board[r][c] == player:
+                line_score += 1
+            elif 0 <= r < len(board) and 0 <= c < len(board) and board[r][c] != ' ':
+                line_score = 0  # 遇到对手的棋子重置
+            if line_score >= 5:
+                return float('inf') if player == 'O' else float('-inf')  # 胜利判定
+        score += line_score
+    return score
+
+
+# 生成所有合法落子位置
+def generate_legal_moves(board):
+    moves = []
+    for row in range(9):
+        for col in range(9):
+            if board[row][col] == " ":
+                moves.append((row, col))
+    return moves
+
+# 在棋盘上落子
+def make_move(board, move, player):
+    new_board = [row[:] for row in board]
+    row, col = move
+    new_board[row][col] = player
+    return new_board
+
+# α-β剪枝
+def minimax(board, depth, maximizing_player, alpha, beta):
+    if depth == 0 or check_winner(board, "X") or check_winner(board, "O"):
+        return evaluate_board(board)
+
+    # AI（MAX)回合
+    if maximizing_player:
+        max_eval = float('-inf')
+        for move in generate_legal_moves(board):
+            new_board = make_move(board, move, "O")
+            eval = minimax(new_board, depth - 1, False, alpha, beta)
+            max_eval = max(max_eval, eval)
+            alpha = max(alpha, eval)
+            if beta <= alpha:
+                break  # 剪枝
+        return max_eval
+    
+    # 玩家(MIN)回合
+    else:
+        min_eval = float('inf')
+        for move in generate_legal_moves(board):
+            new_board = make_move(board, move, "X")
+            eval = minimax(new_board, depth - 1, True, alpha, beta)
+            min_eval = min(min_eval, eval)
+            beta = min(beta, eval)
+            if beta <= alpha:
+                break  # 剪枝
+        return min_eval
+
+# AI 决策
+def ai_move(board):
+    start_time = time.time()  # 记录开始时间
+
+    # 优先阻止玩家“X”获胜
+    for row in range(len(board)):
+        for col in range(len(board[row])):
+            if is_valid_move(board, row, col):
+                board[row][col] = 'X'  # 模拟玩家下棋
+                if check_winner(board, 'X'):  # 检查玩家是否获胜
+                    board[row][col] = 'O'  # 阻止玩家胜利
+                    end_time = time.time()  # 记录结束时间
+                    print(f"Thinking time: {end_time - start_time:.6f} seconds")
+                    return (row, col)
+                board[row][col] = ' '  # 撤销模拟
+   
+    
+    # 如果没有威胁，进行常规评估
+    best_score = float('-inf')
+    best_move = None
+    for row in range(len(board)):
+        for col in range(len(board[row])):
+            if is_valid_move(board, row, col):
+                board[row][col] = 'O'  # 模拟AI下棋
+                score = evaluate_board(board)
+                board[row][col] = ' '  # 撤销模拟
+                if score > best_score:
+                    best_score = score
+                    best_move = (row, col)
+    end_time = time.time()  # 记录结束时间
+    print(f"Thinking time: {end_time - start_time:.6f} seconds")
+    return best_move if best_move else (0, 0)  # 返回一个默认位置
+
+
+# 主游戏循环
+def play_game():
+    board = initialize_board()
+    print("Welcome to Gomoku! You are the player 'X'")
+    print_board(board)
+
+    while True:
+        # 玩家回合
+        while True:
+            try:
+                row, col = map(int, input("Please enter your drop position (format: row column)：").split())
+                if is_valid_move(board, row, col):
+                    board[row][col] = "X"
+                    break
+                else:
+                    print("Invalid drop, please try again!")
+            except ValueError:
+                print("The format is incorrect, please enter valid rows and columns!")
+        
+        print_board(board)
+        if check_winner(board, "X"):
+            print("You Win!")
+            break
+
+        # AI 回合
+        print("AI is thinking...")
+        move = ai_move(board)
+        if move:
+            board[move[0]][move[1]] = "O"
+            print(f"AI drop position: {move}")
+            print_board(board)
+            if check_winner(board, "O"):
+                print("Sorry, you lose!")
+                break
+        else:
+            print("Draw!")
+            break
+
+# 启动游戏
+if __name__ == "__main__":
+    play_game()
