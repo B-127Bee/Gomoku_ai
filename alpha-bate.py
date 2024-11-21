@@ -173,3 +173,6 @@ def alpha_beta_play_game():
         else:
             print("Draw!")
             break
+
+if __name__ == "__main__":
+    alpha_beta_play_game()
