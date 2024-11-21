@@ -1,6 +1,6 @@
 import random
 from copy import deepcopy
-
+import time
 
 class Gomoku:
     def __init__(self):
@@ -12,7 +12,11 @@ class Gomoku:
 
     def display_board(self):
         """Display the current state of the board."""
-        print("\n".join([" ".join(row) for row in self.board]))
+        print("   " + " ".join(str(i) for i in range(self.size)))
+
+        # Print each row with its index
+        for i, row in enumerate(self.board):
+            print(f"{i:2} " + " ".join(row))  # Row index and row content
         print()
 
     def is_empty(self, x, y):
@@ -26,26 +30,26 @@ class Gomoku:
             return True
         return False
 
-    def find_threats(self, player):
+    def find_threats(self):
         """Find all moves where the opponent is about to win or about to form four in a row."""
-        threats = []
+        threats = {'my_winning': [], 'opponent_winning': [], 'four': []}
         for x in range(self.size):
             for y in range(self.size):
                 if self.is_empty(x, y):
-                    # Temporarily make the move for the player
-                    self.board[x][y] = player
-                
-                    # Check if the move leads to a winning condition (5 in a row)
-                    if self.check_winner(self.board, player):
-                        threats.append((x, y, "win"))
+                    # simulate current
+                    self.board[x][y] = self.current_player
+                    if self.check_winner(player=self.current_player):
+                        threats['my_winning'].append((x, y))
+                    elif self.check_four_in_a_row(self.board, self.current_player):
+                        threats['four'].append((x, y))
 
-                    # Check if the move creates four consecutive pieces (next move will lead to 5)
-                    elif self.check_four_in_a_row(self.board, player):
-                        threats.append((x, y, "four"))
-                
-                    # Undo the move
+                    # simulate opponent
+                    self.board[x][y] = self.opponent_player
+                    if self.check_winner(player=self.opponent_player):
+                        threats['opponent_winning'].append((x, y))
+
+                    # fixed
                     self.board[x][y] = '*'
-
         return threats
 
     def check_four_in_a_row(self, board, player):
@@ -153,6 +157,7 @@ class Gomoku:
 
         while empty_cells:
             # Randomly pick an empty cell
+            self.searched_nodes += 1
             x, y = random.choice(empty_cells)
             board[x][y] = current_turn
 
@@ -169,45 +174,32 @@ class Gomoku:
     def mcts(self, player='X', simulations_per_move=50):
         """Calculate the best move using Monte Carlo Tree Search."""
         opponent = 'O' if player == 'X' else 'X'
+        self.searched_nodes = 0
+        start_time = time.time()
 
         # Step 1: Check for the opponent's threats (five in a row or four in a row)
-        opponent_threats = self.find_threats(opponent)
-        if opponent_threats:
-            # Block the most critical threat (either a "win" or a "four in a row")
-            for move in opponent_threats:
-                x, y, threat_type = move
-                if threat_type == "win":
-                    print(f"AI is blocking opponent's winning move at {x, y}.")
-                    return (x, y)  # Block winning move
-                elif threat_type == "four":
-                    print(f"AI is blocking opponent's four in a row at {x, y}.")
-                    return (x, y)  # Block four-in-a-row move
-
-        # Step 2: Check for the AI's own winning move
-        my_winning_moves = self.find_threats(player)
-        if my_winning_moves:
-            print(f"AI found a winning move: {my_winning_moves[0]}")
-            return my_winning_moves[0]
-
-        # Step 3: Check for moves to block the opponent's win
-        opponent_winning_moves = self.find_threats(opponent)
-        if opponent_winning_moves:
-            print(f"AI is blocking opponent's winning move: {opponent_winning_moves[0]}")
-            return opponent_winning_moves[0]
+        threats = self.find_threats()
+        if threats['my_winning']:
+            return threats['my_winning'][0]  
+        if threats['opponent_winning']:
+            return threats['opponent_winning'][0] 
 
         # Step 4: Perform MCTS for other moves
-        empty_cells = list(self.get_relevant_moves())  # Use relevant moves instead of all empty cells
+        #empty_cells = list(self.get_relevant_moves())  # Use relevant moves instead of all empty cells
+        empty_cells = [(x, y) for x in range(self.size) for y in range(self.size) if self.board[x][y] == '*']
         move_scores = {}
 
         for x, y in empty_cells:
             win_count = 0
 
             for _ in range(simulations_per_move):
+                
                 simulated_board = deepcopy(self.board)
-                simulated_board[x][y] = player  # AI's move
-
+                simulated_board[x][y] = player  
+                
                 if self.simulate_game(simulated_board, opponent) == player:
                     win_count += 1
+
 
             move_scores[(x, y)] = win_count / simulations_per_move
 
@@ -218,6 +210,9 @@ class Gomoku:
         # Select the move with the highest win rate
         best_move = max(move_scores, key=move_scores.get)
         print(f"Best move for player {player} is {best_move} with win rate {move_scores[best_move]:.2f}")
+        elapsed_time = time.time() - start_time
+        print(f"Elapsed time: {elapsed_time:.2f} seconds")
+        print(f"Searched nodes: {self.searched_nodes}")
         return best_move
     
     def get_relevant_moves(self):
@@ -231,6 +226,8 @@ class Gomoku:
                     for dx, dy in directions:
                         nx, ny = x + dx, y + dy
                         if 0 <= nx < self.size and 0 <= ny < self.size and self.is_empty(nx, ny):
+                            if self.check_four_in_a_row(self.board, self.current_player):
+                               high_priority.append((nx, ny))  # record higher priority step
                             relevant_moves.add((nx, ny))
 
         # Fallback: If no moves are found near pieces, consider all empty cells
@@ -250,7 +247,7 @@ class Gomoku:
                 print(f"Player {self.opponent_player} wins!")
                 break
 
-            if self.current_player == 'X':  # AI's turn
+            if self.current_player == 'O':  # AI's turn
                 print("AI is calculating its move...")
                 x, y = self.mcts(player=self.current_player)
             else:  # Human or opponent's turn
@@ -273,5 +270,6 @@ class Gomoku:
 
 
 # Start the game
+
 game = Gomoku()
 game.play()
