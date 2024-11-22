@@ -2,6 +2,7 @@ import random
 from copy import deepcopy
 import time
 
+
 class Gomoku:
     def __init__(self):
         self.size = 9
@@ -150,7 +151,6 @@ class Gomoku:
 
     def simulate_game(self, board, current_player):
         """Simulate a random game until a winner is found."""
-        players = ['X', 'O']
         current_turn = current_player
 
         empty_cells = [(x, y) for x in range(self.size) for y in range(self.size) if board[x][y] == '*']
@@ -185,7 +185,7 @@ class Gomoku:
             return threats['opponent_winning'][0] 
 
         # Perform MCTS for other moves
-        #empty_cells = list(self.get_relevant_moves())  # Use relevant moves instead of all empty cells
+        # empty_cells = list(self.get_relevant_moves())  # Use relevant moves instead of all empty cells
         empty_cells = [(x, y) for x in range(self.size) for y in range(self.size) if self.board[x][y] == '*']
         move_scores = {}
 
@@ -199,7 +199,6 @@ class Gomoku:
                 
                 if self.simulate_game(simulated_board, opponent) == player:
                     win_count += 1
-
 
             move_scores[(x, y)] = win_count / simulations_per_move
 
@@ -236,8 +235,6 @@ class Gomoku:
             relevant_moves = {(x, y) for x in range(self.size) for y in range(self.size) if self.is_empty(x, y)}
 
         return relevant_moves
-
-
 
     def play(self):
         """Main game loop."""
