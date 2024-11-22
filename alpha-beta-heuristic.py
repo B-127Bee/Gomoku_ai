@@ -1,4 +1,8 @@
 # Constants
+import time
+
+from fontTools.merge import timer
+
 PLAYER_X = 'X' # user
 PLAYER_O = 'O' # agent
 EMPTY = '*'
@@ -11,6 +15,11 @@ DIRECTION = [[0,  -1, 0, 1],
              [-1, 1,  1, -1]]
 DEPTH = 3
 MOVE = (0, 0)
+
+TOTAL_COUNT = 0
+TOTAL_NODES = 0
+PRUNED_NODES = 0
+TOTAL_TIME = 0
 
 LIAN_5 = "11111"
 HUO_4 = "011110"
@@ -154,6 +163,7 @@ def val_f(board, pos, player):
     return score * weight
 
 def max_value(board, depth, alpha, beta, player, last_move):
+    global TOTAL_NODES, PRUNED_NODES
     if depth == 0 or is_game_over(board, last_move, player):
         return heuristic_evaluation(board), last_move
     v = float('-inf')
@@ -167,6 +177,7 @@ def max_value(board, depth, alpha, beta, player, last_move):
         for j in range(BOARD_SIZE):
             if board[i][j] == EMPTY:
                 board[i][j] = player
+                TOTAL_NODES += 1
                 v_tmp, _ = min_value(board, depth - 1, alpha, beta, op_player, (i, j))
                 board[i][j] = EMPTY
                 if v_tmp > v:
@@ -174,10 +185,12 @@ def max_value(board, depth, alpha, beta, player, last_move):
                     best_move = (i, j)
                 alpha = max(alpha, v)
                 if alpha >= beta:
+                    PRUNED_NODES += 1
                     return v, best_move
     return v, best_move
 
 def min_value(board, depth, alpha, beta, player, last_move):
+    global TOTAL_NODES, PRUNED_NODES
     if depth == 0 or is_game_over(board, last_move, player):
         return heuristic_evaluation(board), last_move
     v = float('inf')
@@ -191,6 +204,7 @@ def min_value(board, depth, alpha, beta, player, last_move):
         for j in range(BOARD_SIZE):
             if board[i][j] == EMPTY:
                 board[i][j] = player
+                TOTAL_NODES += 1
                 v_tmp, _ = max_value(board, depth - 1, alpha, beta, op_player, (i, j))
                 board[i][j] = EMPTY
                 if v_tmp < v:
@@ -198,6 +212,7 @@ def min_value(board, depth, alpha, beta, player, last_move):
                     best_move = (i, j)
                 beta = min(beta, v)
                 if alpha >= beta:
+                    PRUNED_NODES += 1
                     return v, best_move
     return v, best_move
 
@@ -215,7 +230,7 @@ def print_board(board):
 # Main function to play the game
 def play_game():
 
-    global board
+    global board, TOTAL_COUNT, TOTAL_NODES, PRUNED_NODES,TOTAL_TIME
     board = initialize_board()
     while True:
         try:
@@ -237,11 +252,19 @@ def play_game():
             break
 
         print("AI回合")
+        start_time = time.time()
         ai_row, ai_col = alpha_beta(board, last_move)
+        end_time = time.time()
+        TOTAL_TIME += end_time - start_time
         print(ai_row, ai_col)
         board[ai_row][ai_col] = PLAYER_O
         last_move = (ai_row, ai_col)
         print_board(board)
+        TOTAL_COUNT += 1
+        print(f"Nodes:{TOTAL_NODES}; Pruned:{PRUNED_NODES}; Time:{TOTAL_TIME}")
+        TOTAL_NODES = 0
+        PRUNED_NODES = 0
+        TOTAL_TIME = 0
 
         if is_game_over(board, last_move, PLAYER_O):
             print_board(board)
@@ -256,3 +279,4 @@ def play_game():
 
 if __name__ == "__main__":
     play_game()
+# nodes:57327 pruned:1362
